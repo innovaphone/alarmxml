@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<voicemail>
+  <!-- innovaphone Simple Alarm Management == innovaphone AG V10.00 KWA 2014 -->
+  
+  <function define="Initialize">
+	<store-cookie root="" name="SetupLoops.txt" out="$LoopNr"/> 
+	<assign out="$MyLoop" value="0"/>
+	<store-del root="" name="TMP/CallEND.txt"/> 
+	<store-del root="" name="TMP/AppEND.txt"/>
+	<store-del root="" name="TMP/DenyEND.txt"/>
+	<store-getstat root="LOG" name="/" out-error="$error"/>
+	<switch var="$error">
+            <case not-equal="0">
+		 <store-mkdir root="" name="LOG/"/>
+            </case>
+        </switch>
+	<store-getstat root="TMP" name="/" out-error="$error"/>
+	<switch var="$error">
+            <case not-equal="0">
+		 <store-mkdir root="" name="TMP/"/>\
+            </case>
+        </switch>
+	<assign out="$MyPause" value="0"/>
+	<store-cookie root="" name="SetupMailTo.txt" out="$to"/>
+	<store-cookie root="" name="SetupMailServer.txt" out="$Mserver"/>
+	<store-cookie root="" name="SetupMailHeader.txt" out="$Meader"/>
+	<assign out="$NextID" value="0"/>
+	<store-cookie root="" name="TMP/NextToCall.txt" value="$NextID"/> 
+	<store-cookie root="" name="SetupLoopPause.txt" out="$MyPause"/> 
+	<store-cookie root="" name="SetupLoopBusy.txt" out="$BusyPause"/>
+	<add value="60" value2="$MyPause" out="$MyTO"/>
+	<switch var="$MyPause">
+		<case less="$BusyPause">
+			<add value="60" value2="$BusyPause" out="$MyTO"/>				         	
+             	</case>
+ 	</switch> 
+	<store-get root="" name="AlarmXMLb.xml" out-url="$suburl" />
+	<call name="CheckTo"/>	 
+  </function>
+  
+  <function define="JobNummer">
+	<store-getstat root="" name="NULL"  out-year="$year" out-mon="$mon" out-mday="$mday" out-hour="$hour" out-min="$min"/>
+	<lib-strlen out="$res" string="$mon"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$mon" string="0" string2="$mon"/>
+           </case>
+	</switch>
+	<lib-strlen out="$res" string="$mday"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$mday" string="0" string2="$mday"/>
+           </case>
+	</switch>
+	<lib-strlen out="$res" string="$hour"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$hour" string="0" string2="$hour"/>
+           </case>
+	</switch>
+	<lib-strlen out="$res" string="$min"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$min" string="0" string2="$min"/>
+           </case>
+	</switch>
+        <lib-strcat out-string="$res" string="$year" string2="_"/>
+	<lib-strcat out-string="$res" string="$res" string2="$mon"/>
+	<lib-strcat out-string="$res" string="$res" string2="_"/>	
+	<lib-strcat out-string="$res" string="$res" string2="$mday"/>
+	<lib-strcat out-string="$res" string="$res" string2="_"/>
+	<lib-strcat out-string="$res" string="$res" string2="$hour"/>
+	<lib-strcat out-string="$res" string="$res" string2="$min"/>
+	<lib-strcat out-string="$res" string="LOG/" string2="$res"/>
+	<store-getstat root="" name="$res" out-error="$error"/>
+	<switch var="$error">
+  	   <case equal="0"> 
+              <lib-strcat out-string="$res" string="$res" string2="_1"/>
+           </case>
+	</switch>
+	<store-getstat root="" name="$res" out-error="$error"/>
+	<switch var="$error">
+  	   <case equal="0"> 
+              <lib-strcat out-string="$res" string="$res" string2="_2"/>
+           </case>
+	</switch>
+	<switch var="$error">
+  	   <case equal="0"> 
+              <lib-strcat out-string="$res" string="$res" string2="_3"/>
+           </case>
+	</switch>
+	<store-mkdir root="" name="$res"/>
+	<assign out="$MyDir" value="$res"/>
+  </function>
+
+  <function define="Rekursiv">
+	<store-getstat root="SYN" name="/" out-error="$error"/>
+	<switch var="$error">
+            <case not-equal="0">
+		 <store-mkdir root="" name="SYN/"/>
+            </case>
+        </switch>
+	<store-getstat root="ALV" name="/" out-error="$error"/>
+	<switch var="$error">
+            <case not-equal="0">
+		 <store-mkdir root="" name="ALV/"/>
+            </case>
+        </switch>
+	<assign out="$pin-ok" value="false"/>	
+	<assign out="$MaxSynch" value="0"/>
+	<lib-strcat out-string="$res" string="ALV/" string2="$MyID"/>
+	<lib-strcat out-string="$Arelease" string="$res" string2=".txt"/>
+	<store-cookie root="" name="$Arelease" value="1"/>
+	<while notcond="$pin-ok">
+		<store-get root="" name="silence.g711a" out-url="$ctrl"/>
+		<pbx-prompt url="$ctrl" sec="1" repeat="false"/>
+		<store-getstat root="" name="TMP/Rekur.txt" out-error="$error"/>
+		<switch var="$error">
+	            <case equal="2">
+			<store-cookie root="" name="TMP/Rekur.txt" value="$MyID"/>
+			<lib-strcat out-string="$res" string="SYN/" string2="$MyID"/>
+			<lib-strcat out-string="$Crelease" string="$res" string2=".txt"/>
+			<store-cookie root="" name="$Crelease" value="1"/>
+			<return/>
+        	    </case>
+	        </switch>
+		<add value="1" value2="$MaxSynch" out="$MaxSynch"/>
+		<switch var="$MaxSynch">
+	            <case greater="11"> 
+			 <lib-strcat out-string="$res" string="SYN/" string2="$MyID"/>
+			 <lib-strcat out-string="$Crelease" string="$res" string2=".txt"/>
+			 <store-cookie root="" name="$Crelease" value="1"/>
+			 <return/>
+        	    </case>
+	        </switch>
+		<store-get-msgcount root="ALV" out-count="$Nfiles"/>
+		<switch var="$Nfiles">
+	            <case equal="0">
+			 <pbx-disc/>
+        	    </case>
+	        </switch>
+	</while>
+  </function>
+
+  <function define="ID_besorgen">
+	<store-getnew root="" ext="" out-url="$ID"/> 
+	<store-split url="$ID"  out-file="$MyID" />
+	<store-cookie root="" name="TMP/IDsynch.txt" value="$MyID"/>
+	<assign out="$pin-ok" value="false"/>	
+	<assign out="$MaxSynch" value="0"/>
+	<while notcond="$pin-ok">
+		<store-get root="" name="silence.g711a" out-url="$ctrl"/>
+		<pbx-prompt url="$ctrl" sec="1" repeat="false"/>
+		<store-getstat root="" name="TMP/IDsynch.txt" out-error="$error"/>
+		<switch var="$error">
+	            <case equal="2">
+			 <return/>
+        	    </case>
+	        </switch>
+		<add value="1" value2="$MaxSynch" out="$MaxSynch"/>
+		<switch var="$MaxSynch">
+	            <case greater="6">
+			 <pbx-disc/>
+        	    </case>
+	        </switch>
+	</while>
+	<pbx-disc/>      
+  </function>
+
+<function define="WriteLog">
+	<store-cookie root="" name="TMP/CallEND.txt" out="$MyIndex"/> 
+	<index value="$MyIndex" pos="1" size="1" out="$Index"/>
+	<lib-strcat out-string="$Grund" string="unknown_" string2="$Index"/>
+	<switch var="$Index">
+	        <case equal="1">
+			<assign out="$Grund" value="Answer"/>
+			<assign out="$AllBusy" value="false"/>							        	
+            	</case>
+	        <case equal="2">
+			<assign out="$Grund" value="No_Answer"/>
+			<assign out="$AllBusy" value="false"/>							        	
+            	</case>
+	        <case equal="3">
+			<assign out="$Grund" value="Busy"/>							        	
+            	</case>
+		<case equal="4">
+			<assign out="$Grund" value="Reject"/>
+			<assign out="$AllBusy" value="false"/>							        	
+            	</case>
+		<case equal="5">
+			<assign out="$Grund" value="unknown_51"/>
+			<assign out="$AllBusy" value="false"/>							        	
+            	</case>
+		<case equal="6">
+		      <index value="$MyIndex" pos="2" size="16" out="$Auser"/>
+		      <lib-strcat out-string="$Auser" string="Abort_User_" string2="$Auser"/>
+		      <assign out="$Grund" value="$Auser"/>							        	
+            	</case>
+        </switch>
+	<call name="MyString"/>
+	<store-del root="" name="TMP/CallEND.txt"/>
+  </function>
+
+  <function define="WriteApp">
+	<store-cookie root="" name="TMP/AppEND.txt" out="$MyIndex"/>
+	<index value="$MyIndex" pos="1" size="1" out="$Index"/>
+	<lib-strcat out-string="$Grund" string="unknown_" string2="$Index"/>	 
+	<switch var="$Index">
+	        <case equal="1">
+			<assign out="$Grund" value="Watchdog"/>							        	
+            	</case>
+	        <case equal="2">
+			<assign out="$Grund" value="Final Loop"/>							        	
+            	</case>
+	        <case equal="3">
+			<assign out="$Grund" value="Accept"/>							        	
+            	</case>
+		<case equal="4">
+			<assign out="$Grund" value="Call_to_short"/>							        	
+            	</case>
+		<case equal="6">
+		      <index value="$MyIndex" pos="2" size="16" out="$Auser"/>
+		      <lib-strcat out-string="$Auser" string="Abort_User_" string2="$Auser"/>
+		      <assign out="$Grund" value="$Auser"/>							        	
+            	</case>
+		<case equal="7">
+			<assign out="$Grund" value="Double_Call"/>							        	
+            	</case>
+		<case equal="8">
+			<assign out="$Grund" value="Double_Call_2"/>							        	
+            	</case>
+	</switch>
+	<call name="MyString"/>
+  </function>
+
+  <function define="MyString">
+	<call name="Zeit"/>
+	<lib-strcat out-string="$Mres" string="$NextID" string2=".txt"/>
+	<store-cookie root="" name="$Mres" out="$MyMUser"/>
+	<lib-strcat out-string="$Zeit" string="$Zeit" string2="_"/>
+	<lib-strcat out-string="$Zeit" string="$Zeit" string2="$MyMUser"/>
+	<lib-strcat out-string="$Zeit" string="$Zeit" string2="_"/>
+	<lib-strcat out-string="$Zeit" string="$Zeit" string2="$Grund"/>
+	<store-cookie root="$MyDir" name="$Zeit" value=""/>
+	<call name="EAlarm"/>
+  </function>
+
+  <function define="Zeit">
+	<store-getstat root="" name="NULL" out-hour="$hour" out-min="$min" />
+	<lib-strlen out="$res" string="$hour"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$hour" string="0" string2="$hour"/>
+           </case>
+	</switch>
+	<lib-strlen out="$res" string="$min"/> 
+	<switch var="$res">
+  	   <case equal="1"> 
+               <lib-strcat out-string="$min" string="0" string2="$min"/>
+           </case>
+	</switch>
+	<lib-strcat out-string="$Zeit" string="$hour" string2="$min"/>
+  </function>
+
+  <function define="Subscript">
+	<add value="1" value2="$NextID" out="$NextID"/>
+	<lib-strcat out-string="$Highres" string="$NextID" string2=".txt"/>
+	<store-getstat root="" name="$Highres" out-error="$error"/>
+	<if cond="$LastL">
+		<assign out="$NextID" value=""/>
+		<store-cookie root="" name="TMP/AppEND.txt" value="2"/>
+		<!-- store-del root="" name="TMP/Rekur.txt"/ -->
+		<return/>
+        </if>
+	<switch var="$error">
+            <case not-equal="0">
+		<add value="1" value2="$MyLoop" out="$MyLoop"/>
+		<switch var="$MyLoop">
+			<case greater="$LoopNr">
+				<assign out="$LastL" value="true"/>
+				<assign out="$NextID" value="X"/>
+				<assign out="$Eres" value="X.txt"/>
+				<store-getstat root="" name="$Eres" out-error="$Eerror"/>
+				<switch var="$Eerror">
+			            <case not-equal="0">
+					<assign out="$NextID" value=""/>
+					<store-cookie root="" name="TMP/AppEND.txt" value="2"/>
+					<!-- store-del root="" name="TMP/Rekur.txt"/ -->
+
+					<return/>
+				    </case>
+			        </switch>
+				<wait sec="1"/>
+			 	<store-cookie root="" name="TMP/NextToCall.txt" value="$NextID"/>
+			        <store-getstat root="" name="$suburl" out-error="$error"/>
+			        <switch var="$error">
+			            <case equal="0">
+			                <exec url="$suburl"/>
+			        </case>
+			        </switch>
+				<return/>
+			</case>
+		</switch>
+		<if cond="$AllBusy">
+                	<wait sec="$BusyPause"/>     
+                </if>
+                <else>
+			<wait sec="$MyPause"/>                            
+                </else>
+                <assign out="$NextID" value="1"/>
+		<assign out="$AllBusy" value="true"/>
+            </case>
+        </switch>
+	<wait sec="1"/>
+ 	<store-cookie root="" name="TMP/NextToCall.txt" value="$NextID"/>
+        <store-getstat root="" name="$suburl" out-error="$error"/>
+        <switch var="$error">
+            <case equal="0">
+                <exec url="$suburl"/>
+            </case>
+        </switch>
+  </function>
+
+  <function define="EAlarm">
+	<switch var="$to">
+		<case not-equal="">
+			<assign out="$from" value="$to"/>    <!--from email = to address by default-->
+			<lib-strcat out-string="$subject" string="$Meader" string2="$Zeit"/>
+		      	<assign out="$server" value="$Mserver"/>     <!--optional, outgoing smtp server-->
+		        <assign out="$user" value=""/>       <!--optional, authentication info-->
+		        <assign out="$password" value=""/>   <!--optional, authentication info-->
+			<wait sec="1"/>
+		        <exec url="mailto:$to?from=$from&amp;subject=$subject&amp;srv=$server&amp;usr=$user&amp;pwd=$password&amp;"/>
+		</case>
+	</switch>
+  </function>
+
+  <function define="CheckTo">
+        <assign out="$i" value="1"/>
+        <assign out="$c" value=""/>
+        <index value="$to" pos="$i" size="1" out="$c"/>
+        <lib-strlen string="$c" out="$len-c" />
+        <while cond="$len-c">
+            <switch var="$c">
+                <case equal="@">
+                    <return/>         
+                </case>
+            </switch>
+            <add value="$i" value2="1" out="$i"/>
+            <assign out="$c" value=""/>
+            <index value="$to" pos="$i" size="1" out="$c"/>
+            <lib-strlen string="$c" out="$len-c" />
+        </while>
+        <assign out="$to" value=""/>   
+  </function>
+
+  <function define="Main">
+	<call name="ID_besorgen"/>
+	<assign out="$NCC" value=""/>
+	<call name="Rekursiv"/>
+	<assign out="$NCC" value="UP"/>
+	<event type="call-end">
+	 	<switch var="$NCC">
+			<case equal="UP">
+				<store-del root="" name="TMP/Rekur.txt"/>
+				<wait sec="1"/>
+			</case>
+		</switch>
+	</event>
+	<call name="Initialize"/>
+	<call name="JobNummer"/>
+	<event type="timer" name="vbguard">
+		<if notcond="$AnsNOaction">
+			<store-cookie root="" name="TMP/AppEND.txt" value="1"/>
+			<call name="WriteApp"/>
+			<pbx-disc/>  
+	        </if>
+		<if cond="$AnsNOaction">
+			<store-cookie root="" name="TMP/CallEND.txt" value="2"/>   
+	        </if>
+	</event>
+	<assign out="$pin-ok" value="false"/>
+	<assign out="$LastL" value="false"/>
+	<assign out="$AllBusy" value="true"/>
+	<assign out="$MaxLoop" value="0"/>
+	<while notcond="$pin-ok">
+		<add value="1" value2="$MaxLoop" out="$MaxLoop"/>
+		<switch var="$MaxLoop">
+			<case greater="1200">
+				<pbx-disc/>           	
+             	    	</case>
+		</switch>
+		<timer name="vbguard" sec="$MyTO"/>
+		<assign out="$AnsNOaction" value="true"/>
+		<call name="Subscript"/>
+		assign out="$AnsNOaction" value="false"/>
+	  	<assign out="$Action" value="false"/>
+		<while notcond="$Action">
+		     <store-get root="" name="silence.g711a" out-url="$ctrl"/>
+	             <pbx-prompt url="$ctrl" sec="1" repeat="false"/>
+		     <store-getstat root="" name="TMP/CallEND.txt" out-error="$error"/>
+		     <switch var="$error">
+		     	<case equal="0">
+				<call name="WriteLog"/>
+		             	<assign out="$Action" value="true"/>             	
+             	    	</case>
+ 		     </switch>
+		     <store-getstat root="" name="TMP/DenyEND.txt" out-error="$error"/>
+		     <switch var="$error">
+		        <case equal="0">
+				<assign out="$Grund" value="Reject"/>
+				<call name="MyString"/>
+		             	<assign out="$Action" value="true"/> 
+				<store-del root="" name="TMP/DenyEND.txt"/>            	
+             	    	</case>
+ 		     </switch>
+   		     <store-getstat root="" name="TMP/AppEND.txt" out-error="$error"/>
+		     <switch var="$error">
+		        <case equal="0">
+				<call name="WriteApp"/>
+				<pbx-disc/>           	
+             	    	</case>
+ 		     </switch>
+	     	</while>
+		<store-getstat root="" name="TMP/AppEND.txt" out-error="$error"/>
+		<switch var="$error">
+		        <case equal="0">
+				<call name="WriteApp"/>
+				<pbx-disc/>           	
+             	    	</case>
+ 		</switch>
+	</while>
+  </function>
+  
+</voicemail>
+<!-- innovaphone call sequencer wiki-src/xml/AlarmXML 1,0,0,0 (C) innovaphone AG 2010-2014 -->
